@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:math';
 
 import 'package:bhojan/Model/model.dart';
 import 'package:bhojan/screens/search.dart';
@@ -7,10 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   static const String routeName = "/home";
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -18,11 +19,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
-
+  bool isCategoryLoading = true;
   List<RecipeModel> recipeList = [];
-
   List<RecipeModel> trendingRecipeList = [];
-
   List<String> cuisineList = [
     "Indian",
     "Italian",
@@ -33,37 +32,30 @@ class _HomeScreenState extends State<HomeScreen> {
     "French",
     "Mexican",
   ];
-  List<bool> _hasBeenPressed = [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-  ];
-
-  TextEditingController searchController = new TextEditingController();
-
+  List<bool> _hasBeenPressed = List.filled(8, false);
+  TextEditingController searchController = TextEditingController();
   static const String _YOUR_APP_ID = "c768f5de";
   static const String _YOUR_APP_KEY = "acf684e6eb5b1a594c92d7a5ec4845e0";
+  Random rng = Random();
+
+  @override
+  void initState() {
+    super.initState();
+    getRecipe("Indian");
+    getTrendingRecipe(mealType[rng.nextInt(4)]);
+  }
 
   getRecipe(String searchQuery) async {
     Uri url = Uri.parse(
         "https://api.edamam.com/api/recipes/v2?type=public&q={$searchQuery}&app_id=c768f5de&app_key=acf684e6eb5b1a594c92d7a5ec4845e0&random=true");
     http.Response apiresponse = await http.get(url);
-    Map data = await jsonDecode(apiresponse.body);
-    // log(data.toString());
+    Map data = jsonDecode(apiresponse.body);
     setState(() {
       data["hits"].forEach((element) {
-        RecipeModel recipeModel = new RecipeModel();
-        recipeModel = RecipeModel.fromMap(element["recipe"]);
+        RecipeModel recipeModel = RecipeModel.fromMap(element["recipe"]);
         recipeList.add(recipeModel);
-        setState(() {
-          isLoading = false;
-        });
       });
+      isLoading = false;
     });
   }
 
@@ -71,29 +63,23 @@ class _HomeScreenState extends State<HomeScreen> {
     Uri url = Uri.parse(
         "https://api.edamam.com/api/recipes/v2?type=public&q={$searchQuery}&app_id=c768f5de&app_key=acf684e6eb5b1a594c92d7a5ec4845e0&random=true");
     http.Response apiresponse = await http.get(url);
-    Map data = await jsonDecode(apiresponse.body);
-    // log(data.toString());
+    Map data = jsonDecode(apiresponse.body);
     setState(() {
       data["hits"].forEach((element) {
-        RecipeModel recipeModel = new RecipeModel();
-        recipeModel = RecipeModel.fromMap(element["recipe"]);
+        RecipeModel recipeModel = RecipeModel.fromMap(element["recipe"]);
         trendingRecipeList.add(recipeModel);
-        log(trendingRecipeList.toString());
-        setState(() {
-          isLoading = false;
-        });
       });
+      isLoading = false;
     });
   }
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-
-    getRecipe("Indian");
-    getTrendingRecipe("snacks");
-  }
+  List<String> mealType = [
+    "breakfast",
+    "brunch",
+    "lunch/dinner",
+    "snack",
+    "teatime"
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -101,219 +87,140 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              //Find Best recipe for cooking Text
-              Container(
+              Padding(
                 padding: const EdgeInsets.fromLTRB(30, 10, 0, 0),
-                height: MediaQuery.of(context).size.height / 10,
-                width: MediaQuery.of(context).size.width,
                 child: Text(
                   "Find best recipes\nfor cooking",
                   style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.black,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              // searchBox
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20.0),
-                  color: Colors.grey.shade200,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(Icons.search_sharp),
-                      ),
-                      onTap: () {
-                        if ((searchController.text).replaceAll(" ", "") == "") {
-                          print("blank");
-                        } else {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      Search(searchController.text)));
-                        }
-                      },
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: searchController,
-                        style: GoogleFonts.poppins(
-                            color: Colors.grey, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: "Let's Cook Something!",
-                          border: InputBorder.none,
-                        ),
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (value) {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      Search(searchController.text)));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              //trending now text
+              SizedBox(height: 10),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30.0, vertical: 8),
-                child: Row(
-                  children: [
-                    Text(
-                      "Trending now 🔥",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey.shade200,
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if ((searchController.text).replaceAll(" ", "") !=
+                              "") {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      Search(searchController.text)),
+                            );
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.search_sharp),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: searchController,
+                          style: GoogleFonts.poppins(
+                              color: Colors.grey, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: "Let's Cook Something!",
+                            border: InputBorder.none,
+                          ),
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (value) {
+                            if (value.isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Search(value)),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              // horizontal list
+              SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Text(
+                  "Trending now 🔥",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              SizedBox(height: 10),
               Container(
-                height: MediaQuery.of(context).size.height / 4,
-                width: MediaQuery.of(context).size.width,
-                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                height: 200,
                 child: isLoading
-                    ? SpinKitWaveSpinner(
-                        color: Colors.red,
-                        trackColor: Colors.black,
-                        waveColor: Colors.red,
-                        size: MediaQuery.of(context).size.width / 2,
+                    ? Center(
+                        child: SpinKitWave(
+                          color: Colors.red,
+                          size: 50,
+                        ),
                       )
                     : ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        shrinkWrap: true,
-                        itemCount: trendingRecipeList.length % 11,
+                        itemCount: trendingRecipeList.length,
                         itemBuilder: (context, index) {
-                          return InkWell(
-                            onTap: () {},
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                              color: Colors.transparent,
+                          return GestureDetector(
+                            onTap: () async {
+                              final url =
+                                  Uri.parse(trendingRecipeList[index].url);
+                              try {
+                                await launchUrl(url,
+                                    mode: LaunchMode.inAppWebView);
+                              } catch (e) {
+                                print("Error Loading in App web view.");
+                                await launchUrl(url,
+                                    mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Container(
+                              margin: EdgeInsets.symmetric(horizontal: 10),
+                              width: 150,
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Stack(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.network(
-                                          trendingRecipeList[index].imageUrl,
-                                          fit: BoxFit.cover,
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width /
-                                              1.5,
-                                          height: MediaQuery.of(context)
-                                                  .size
-                                                  .height /
-                                              5,
-                                          loadingBuilder: (BuildContext context,
-                                              Widget child,
-                                              ImageChunkEvent?
-                                                  loadingProgress) {
-                                            if (loadingProgress == null) {
-                                              return child;
-                                            } else {
-                                              return Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  value: loadingProgress
-                                                              .expectedTotalBytes !=
-                                                          null
-                                                      ? loadingProgress
-                                                              .cumulativeBytesLoaded /
-                                                          loadingProgress
-                                                              .expectedTotalBytes!
-                                                      : null,
-                                                ),
-                                              );
-                                            }
-                                          },
-                                          errorBuilder: (BuildContext context,
-                                              Object error,
-                                              StackTrace? stackTrace) {
-                                            // Handle error here
-                                            return const Text('Network Error');
-                                          },
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: 1,
-                                        child: Container(
-                                          padding:
-                                              EdgeInsets.fromLTRB(0, 1, 5, 0),
-                                          decoration: BoxDecoration(
-                                              color:
-                                                  Colors.black38.withAlpha(100),
-                                              borderRadius:
-                                                  const BorderRadius.only(
-                                                topRight: Radius.circular(10),
-                                              )),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.end,
-                                            children: [
-                                              Icon(Icons.local_fire_department,
-                                                  color: Colors.white),
-                                              Text(
-                                                trendingRecipeList[index]
-                                                        .calories
-                                                        .toString()
-                                                        .substring(0, 6) +
-                                                    " kCal",
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                                    ],
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.network(
+                                      trendingRecipeList[index].imageUrl,
+                                      width: double.infinity,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
+                                  SizedBox(height: 5),
+                                  Text(
+                                    trendingRecipeList[index].label,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 5),
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
-                                      Container(
-                                          alignment: Alignment.centerLeft,
-                                          child: Row(
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.all(8.0),
-                                                child: Text(
-                                                  trendingRecipeList[index]
-                                                      .label
-                                                  /*.toString()
-                                                    .substring(0, 10) +
-                                                "...."*/
-                                                  ,
-                                                  style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.black,
-                                                      fontSize: 16),
-                                                ),
-                                              ),
-                                              Container(
-                                                  alignment:
-                                                      Alignment.centerRight,
-                                                  child: const Icon(Icons
-                                                      .trending_up_outlined)),
-                                            ],
-                                          )),
+                                      Icon(Icons.local_fire_department,
+                                          color: Colors.red),
+                                      Text(
+                                        "${trendingRecipeList[index].calories.toStringAsFixed(1)} kCal",
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -323,14 +230,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
               ),
-              // Popular Category Text
-              Container(
-                  alignment: Alignment.centerLeft,
-                  margin: EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    "Popular category",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                  )),
+              SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Text(
+                  "Popular category",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                ),
+              ),
+              SizedBox(height: 10),
               Column(
                 children: [
                   //buttons
@@ -358,6 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         _hasBeenPressed[i] =
                                             !_hasBeenPressed[i];
                                         recipeList.clear();
+
                                         getRecipe(cuisineList[i]);
                                       }
                                     }
@@ -381,158 +290,67 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         }),
                   ),
-                  Container(
-                    height: MediaQuery.of(context).size.height,
-                    width: MediaQuery.of(context).size.width,
-                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: isLoading
-                        ? SpinKitWaveSpinner(
-                            color: Colors.red,
-                            trackColor: Colors.black,
-                            waveColor: Colors.red,
-                            size: MediaQuery.of(context).size.width / 2,
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: (recipeList.length % 11),
-                            itemBuilder: (context, index) {
-                              return InkWell(
-                                onTap: () {},
-                                child: Card(
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                  elevation: 0,
-                                  color: Colors.transparent,
-                                  child: Column(
-                                    children: [
-                                      Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            child: Image.network(
-                                              recipeList[index].imageUrl,
-                                              fit: BoxFit.cover,
-                                              width: MediaQuery.of(context)
-                                                      .size
-                                                      .width /
-                                                  1.5,
-                                              height: MediaQuery.of(context)
-                                                      .size
-                                                      .height /
-                                                  5,
-                                              loadingBuilder:
-                                                  (BuildContext context,
-                                                      Widget child,
-                                                      ImageChunkEvent?
-                                                          loadingProgress) {
-                                                if (loadingProgress == null) {
-                                                  return child;
-                                                } else {
-                                                  return Center(
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      value: loadingProgress
-                                                                  .expectedTotalBytes !=
-                                                              null
-                                                          ? loadingProgress
-                                                                  .cumulativeBytesLoaded /
-                                                              loadingProgress
-                                                                  .expectedTotalBytes!
-                                                          : null,
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                              errorBuilder:
-                                                  (BuildContext context,
-                                                      Object error,
-                                                      StackTrace? stackTrace) {
-                                                // Handle error here
-                                                return const Text(
-                                                    'Network Error!');
-                                              },
-                                            ),
-                                          ),
-                                          Positioned(
-                                            right: 1,
-                                            child: Container(
-                                              padding: EdgeInsets.fromLTRB(
-                                                  0, 1, 5, 0),
-                                              decoration: BoxDecoration(
-                                                  color: Colors.black38
-                                                      .withAlpha(100),
-                                                  borderRadius:
-                                                      const BorderRadius.only(
-                                                    topRight:
-                                                        Radius.circular(10),
-                                                  )),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  Icon(
-                                                      Icons
-                                                          .local_fire_department,
-                                                      color: Colors.white),
-                                                  Text(
-                                                    recipeList[index]
-                                                            .calories
-                                                            .toString()
-                                                            .substring(0, 6) +
-                                                        " kCal",
-                                                    style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 12),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          )
-                                        ],
-                                      ),
-                                      Row(
-                                        children: [
-                                          Container(
-                                              alignment: Alignment.centerLeft,
-                                              child: Row(
-                                                children: [
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Text(
-                                                      recipeList[index].label
-                                                      /*.toString()
-                                                    .substring(0, 10) +
-                                                "...."*/
-                                                      ,
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Colors.black,
-                                                          fontSize: 16),
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                      alignment:
-                                                          Alignment.centerRight,
-                                                      child: const Icon(Icons
-                                                          .trending_up_outlined)),
-                                                ],
-                                              )),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
                 ],
+              ),
+              SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(
+                    recipeList.length,
+                    (index) => GestureDetector(
+                      onTap: () async {
+                        final url = Uri.parse(recipeList[index].url);
+
+                        await launchUrl(url, mode: LaunchMode.inAppWebView);
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                recipeList[index].imageUrl,
+                                width: double.infinity,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                recipeList[index].label,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Icon(Icons.local_fire_department,
+                                      color: Colors.red),
+                                  Text(
+                                    "${recipeList[index].calories.toStringAsFixed(1)} kCal",
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

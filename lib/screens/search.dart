@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:bhojan/Model/model.dart';
-import 'package:bhojan/screens/home.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Search extends StatefulWidget {
   String query;
@@ -132,7 +132,11 @@ class _SearchState extends State<Search> {
                             itemCount: recipeList.length,
                             itemBuilder: (context, index) {
                               return InkWell(
-                                onTap: () {},
+                                onTap: () async {
+                                  final url = Uri.parse(recipeList[index].url);
+
+                                  launchUrl(url, mode: LaunchMode.inAppWebView);
+                                },
                                 child: Card(
                                   margin: EdgeInsets.all(20),
                                   shape: RoundedRectangleBorder(
